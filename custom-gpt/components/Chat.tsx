@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useRef, useEffect } from 'react';
 
@@ -16,7 +16,11 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
+  const [hasUploadedDocuments, setHasUploadedDocuments] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -25,6 +29,57 @@ export default function Chat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const uploadFile = async (file: File) => {
+    setIsUploading(true);
+    setUploadStatus('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+
+      const result = await response.json();
+      setUploadStatus(`✅ ${result.message}`);
+      setHasUploadedDocuments(true);
+
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadStatus(`❌ Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Client-side file size check (10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (file.size > maxSize) {
+        setUploadStatus(`❌ File size exceeds 10MB limit`);
+        // Clear file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+      uploadFile(file);
+    }
+  };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,12 +135,34 @@ export default function Chat() {
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <h1 className="text-xl font-semibold text-gray-900">
-          Custom GPT - Document Chat
-        </h1>
-        <p className="text-sm text-gray-600">
-          Ask questions about your embedded documents
-        </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">
+              Custom GPT - Document Chat
+            </h1>
+            <p className="text-sm text-gray-600">
+              Upload documents and ask questions about them
+            </p>
+          </div>
+          <div className="flex flex-col items-end space-y-2">
+            <label className="cursor-pointer">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md,.pdf,.doc,.docx"
+                onChange={handleFileChange}
+                disabled={isUploading}
+                className="hidden"
+              />
+              <div className={`px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm ${isUploading ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                {isUploading ? 'Uploading...' : 'Upload Document'}
+              </div>
+            </label>
+            {uploadStatus && (
+              <p className="text-xs text-gray-600 max-w-xs text-right">{uploadStatus}</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Messages */}
@@ -93,7 +170,12 @@ export default function Chat() {
         {messages.length === 0 && (
           <div className="text-center text-gray-500 mt-8">
             <p className="text-lg">Welcome to Custom GPT!</p>
-            <p className="text-sm mt-2">Start by asking a question about your documents.</p>
+            <p className="text-sm mt-2">
+              {hasUploadedDocuments
+                ? "Ask questions about your uploaded documents."
+                : "Upload documents using the button above, then ask questions about them."
+              }
+            </p>
           </div>
         )}
 
@@ -142,23 +224,29 @@ export default function Chat() {
 
       {/* Input */}
       <div className="bg-white border-t border-gray-200 px-6 py-4">
-        <form onSubmit={sendMessage} className="flex space-x-4">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question about your documents..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Send
-          </button>
-        </form>
+        {!hasUploadedDocuments ? (
+          <div className="text-center text-gray-500">
+            <p className="text-sm">Please upload a document first to start chatting.</p>
+          </div>
+        ) : (
+          <form onSubmit={sendMessage} className="flex space-x-4">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask a question about your uploaded documents..."
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Send
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
