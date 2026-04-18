@@ -60,7 +60,7 @@ export async function retrieveRelevantDocuments(query: string, limit = 5) {
   const docs = await results.toArray();
 
   // filter out documents with low similarity (e.g., below 0.7) and format the results
-  const filteredDocs = docs.filter(doc => doc.$similarity ? doc.$similarity : 0 > 0.7);
+  const filteredDocs = docs.filter(doc => doc.$similarity ?? 0 > 0.7);
 
   return filteredDocs.map(doc => ({
     text: doc.text,

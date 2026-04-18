@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Document } from '@langchain/core/documents';
-import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import { getEmbeddings, extractTextFromFile, MAX_FILE_SIZE, ALLOWED_TYPES, ALLOWED_EXTENSIONS, createCollection } from '../../../lib/upload';
+import { extractTextFromFile, MAX_FILE_SIZE, ALLOWED_TYPES, ALLOWED_EXTENSIONS } from '../../../lib/upload';
+import { ingestText } from '@/lib/ingest';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,50 +34,13 @@ export async function POST(request: NextRequest) {
     if (!content.trim()) {
       return NextResponse.json({ error: 'No readable text found in file' }, { status: 400 });
     }
-    // Connect to database and get collection
-    const collection = await createCollection();
-
-    // Initialize text splitter
-    const splitter = new RecursiveCharacterTextSplitter({
-      chunkSize: 1000,
-      chunkOverlap: 150,
-    });
-
-    // Prepare document
-    const docs = [
-      new Document({
-        pageContent: content,
-        metadata: {
-          source: file.name,
-          ingestedAt: new Date().toISOString(),
-          uploadedAt: new Date().toISOString(),
-        },
-      }),
-    ];
-
-    // Split into chunks
-    const splitDocuments = await splitter.splitDocuments(docs);
-    const texts = splitDocuments.map((d) => d?.pageContent);
-
-    // Get embeddings
-    const vectors = await getEmbeddings(texts);
-
-    // Prepare records for insertion
-    const records = splitDocuments.map((d, i) => ({
-      $vector: vectors[i],
-      text: d.pageContent,
-      ...d.metadata,
-    }));
-
-    // Insert into vector database
-    if (records.length > 0) {
-      await collection.insertMany(records);
-    }
+    
+    const chunks = await ingestText(content, file.name);
 
     return NextResponse.json({
       success: true,
       message: `Successfully uploaded and embedded ${file.name}`,
-      chunks: splitDocuments.length,
+      chunks,
     });
 
   } catch (error) {

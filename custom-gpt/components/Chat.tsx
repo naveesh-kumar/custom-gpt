@@ -12,6 +12,15 @@ interface Message {
   }>;
 }
 
+function isValidUrl(str: string): boolean {
+  try {
+    const url = new URL(str);
+    return url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -19,6 +28,9 @@ export default function Chat() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [hasUploadedDocuments, setHasUploadedDocuments] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+  const [isIngesting, setIsIngesting] = useState(false);
+  const [urlStatus, setUrlStatus] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,7 +64,6 @@ export default function Chat() {
       setUploadStatus(`✅ ${result.message}`);
       setHasUploadedDocuments(true);
 
-      // Clear file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -67,17 +78,60 @@ export default function Chat() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Client-side file size check (10MB)
-      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
         setUploadStatus(`❌ File size exceeds 10MB limit`);
-        // Clear file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
         return;
       }
       uploadFile(file);
+    }
+  };
+
+  const ingestUrl = async () => {
+    const trimmedUrl = urlInput.trim();
+    if (!trimmedUrl || isIngesting) return;
+
+    if (!isValidUrl(trimmedUrl)) {
+      setUrlStatus('❌ Please enter a valid URL (e.g., https://example.com)');
+      return;
+    }
+
+    setIsIngesting(true);
+    setUrlStatus('');
+
+    try {
+      const response = await fetch('/api/ingest-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: trimmedUrl }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'URL ingestion failed');
+      }
+
+      const result = await response.json();
+      setUrlStatus(`✅ ${result.message}`);
+      setHasUploadedDocuments(true);
+      setUrlInput('');
+    } catch (error) {
+      console.error('URL ingestion error:', error);
+      setUrlStatus(`❌ Failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsIngesting(false);
+    }
+  };
+
+  const handleUrlKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      ingestUrl();
     }
   };
 
@@ -141,7 +195,7 @@ export default function Chat() {
               Custom GPT - Document Chat
             </h1>
             <p className="text-sm text-gray-600">
-              Upload documents and ask questions about them
+              Upload documents or enter a website URL, then ask questions
             </p>
           </div>
           <div className="flex flex-col items-end space-y-2">
@@ -163,6 +217,29 @@ export default function Chat() {
             )}
           </div>
         </div>
+
+        {/* URL Input Section */}
+        <div className="mt-3 flex items-center space-x-2">
+          <input
+            type="text"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={handleUrlKeyDown}
+            placeholder="Enter a website URL (e.g., https://example.com)"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            disabled={isIngesting}
+          />
+          <button
+            onClick={ingestUrl}
+            disabled={!urlInput.trim() || isIngesting}
+            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+          >
+            {isIngesting ? 'Ingesting...' : 'Ingest URL'}
+          </button>
+        </div>
+        {urlStatus && (
+          <p className="mt-1 text-xs text-gray-600">{urlStatus}</p>
+        )}
       </div>
 
       {/* Messages */}
@@ -172,8 +249,8 @@ export default function Chat() {
             <p className="text-lg">Welcome to Custom GPT!</p>
             <p className="text-sm mt-2">
               {hasUploadedDocuments
-                ? "Ask questions about your uploaded documents."
-                : "Upload documents using the button above, then ask questions about them."
+                ? "Ask questions about your uploaded documents or ingested websites."
+                : "Upload documents or enter a website URL above, then ask questions about them."
               }
             </p>
           </div>
@@ -226,7 +303,7 @@ export default function Chat() {
       <div className="bg-white border-t border-gray-200 px-6 py-4">
         {!hasUploadedDocuments ? (
           <div className="text-center text-gray-500">
-            <p className="text-sm">Please upload a document first to start chatting.</p>
+            <p className="text-sm">Please upload a document or ingest a website URL first to start chatting.</p>
           </div>
         ) : (
           <form onSubmit={sendMessage} className="flex space-x-4">
@@ -234,7 +311,7 @@ export default function Chat() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question about your uploaded documents..."
+              placeholder="Ask a question about your uploaded documents or websites..."
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={isLoading}
             />
