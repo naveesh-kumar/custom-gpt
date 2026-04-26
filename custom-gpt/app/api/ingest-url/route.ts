@@ -4,7 +4,7 @@ import { CheerioWebBaseLoader } from '@langchain/community/document_loaders/web/
 
 export async function POST(request: NextRequest) {
   try {
-    const { url } = await request.json();
+    const { url, source } = await request.json();
 
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
@@ -68,12 +68,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Page content exceeds 5MB limit.' }, { status: 400 });
     }
 
-    const result = await ingestText(text, url);
+    const sourceName = typeof source === 'string' && source.trim() ? source.trim() : url;
+    const result = await ingestText(text, sourceName);
 
     return NextResponse.json({
-      message: `Website ingested successfully: ${result.chunks} chunks from ${url}`,
+      message: `Website ingested successfully: ${result.chunks} chunks from ${sourceName}`,
       chunks: result.chunks,
-      source: url,
+      source: sourceName,
     });
   } catch (error) {
     console.error('URL ingestion error:', error);

@@ -10,6 +10,7 @@ export const tools = [
         properties: {
           query: { type: 'string', description: 'The search query.' },
           limit: { type: 'number', description: 'Number of results. Default 5.' },
+          source: { type: 'string', description: 'Optional source name to restrict results to a specific source.' },
         },
         required: ['query'],
       },

@@ -12,9 +12,10 @@ async function searchGoogle(query: string): Promise<string> {
 
 async function searchKnowledgeBase(
   query: string,
-  limit = 5
+  limit = 5,
+  source?: string
 ): Promise<string> {
-  const docs = await retrieveRelevantDocuments(query, limit);
+  const docs = await retrieveRelevantDocuments(query, limit, source);
 
   if (docs.length === 0) {
     return 'No relevant documents found.';
@@ -31,13 +32,15 @@ async function searchKnowledgeBase(
 
 export async function executeTool(
   name: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  source?: string
 ): Promise<string> {
   switch (name) {
     case 'search_knowledge_base':
       return await searchKnowledgeBase(
         args.query as string,
-        (args.limit as number) || 5
+        (args.limit as number) || 5,
+        (args.source as string) || source
       );
     case 'search_google':
       return await searchGoogle(args.query as string);

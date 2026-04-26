@@ -44,13 +44,18 @@ export async function getEmbeddings(text: string) {
 }
 
 // Retrieve relevant documents from Astra DB using vector similarity search
-export async function retrieveRelevantDocuments(query: string, limit = 5) {
+export async function retrieveRelevantDocuments(query: string, limit = 5, source?: string) {
   const db = await getDatabase();
   const collection = db.collection(ASTRA_DB_COLLECTION_NAME || 'custom_gpt_collection');
 
   const queryEmbedding = await getEmbeddings(query);
 
-  const results = await collection.find({}, {
+  const filter: Record<string, unknown> = {};
+  if (source) {
+    filter.source = source;
+  }
+
+  const results = await collection.find(filter, {
     sort: { $vector: queryEmbedding },
     limit,
     includeSimilarity: true,
@@ -60,11 +65,32 @@ export async function retrieveRelevantDocuments(query: string, limit = 5) {
   const docs = await results.toArray();
 
   // filter out documents with low similarity (e.g., below 0.7) and format the results
-  const filteredDocs = docs.filter(doc => doc.$similarity ?? 0 > 0.7);
+  const filteredDocs = docs.filter(doc => (doc.$similarity ?? 0) > 0.7);
 
   return filteredDocs.map(doc => ({
     text: doc.text,
     source: doc.source,
     similarity: doc.$similarity,
   }));
+}
+
+export async function getSources() {
+  const db = await getDatabase();
+  const collection = db.collection(ASTRA_DB_COLLECTION_NAME || 'custom_gpt_collection');
+
+  const results = await collection.find({}, {
+    projection: { source: 1 },
+    limit: 1000,
+  });
+
+  const docs = await results.toArray() as Array<{ source?: unknown }>;
+  const sources = Array.from(
+    new Set(
+      docs
+        .map((doc) => (typeof doc.source === 'string' ? doc.source.trim() : ''))
+        .filter(Boolean)
+    )
+  );
+
+  return sources;
 }

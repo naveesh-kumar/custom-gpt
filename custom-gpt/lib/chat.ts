@@ -18,7 +18,7 @@ type LLMMessage = {
   tool_call_id?: string;
 };
 
-export async function generateResponse(query: string) {
+export async function generateResponse(query: string, source?: string) {
   const MAX_TOOL_ROUNDS = 3;
 
   const SYSTEM_PROMPT = `You are a helpful RAG assistant that answers questions from uploaded documents and websites.
@@ -31,8 +31,12 @@ export async function generateResponse(query: string) {
   5. For greetings or casual conversation → respond directly, no tools needed.
   6. NEVER make up information. If neither tool returns results, say you don't know.`;
 
+  const SOURCE_HINT = source
+    ? `If a source filter is provided, only search documents from the source named "${source}" when calling search_knowledge_base. Do not use other uploaded sources unless the user explicitly asks for them.`
+    : '';
+
   const messages: LLMMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: `${SYSTEM_PROMPT}\n\n${SOURCE_HINT}` },
     { role: 'user', content: query.trim() }
   ];
 
@@ -83,7 +87,7 @@ export async function generateResponse(query: string) {
 
           console.log(`[Tool call] ${name}(${JSON.stringify(args)})`);
 
-          const result = await executeTool(name, args);
+          const result = await executeTool(name, args, source);
 
           if (name === 'search_knowledge_base') {
           const noResults =

@@ -30,12 +30,14 @@ export async function POST(request: NextRequest) {
 
     // Extract text from file
     const content = await extractTextFromFile(file);
+    const source = formData.get('source');
+    const sourceName = typeof source === 'string' && source.trim() ? source.trim() : file.name;
 
     if (!content.trim()) {
       return NextResponse.json({ error: 'No readable text found in file' }, { status: 400 });
     }
     
-    const chunks = await ingestText(content, file.name);
+    const chunks = await ingestText(content, sourceName);
 
     return NextResponse.json({
       success: true,
