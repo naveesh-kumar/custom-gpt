@@ -58,9 +58,10 @@ export default function Chat() {
       const sources = Array.isArray(data.sources)
         ? data.sources.filter((source: unknown) => typeof source === 'string' && source.trim()) as string[]
         : [];
+      const latestSources = sources.slice(-5);
 
-      setAvailableSources(sources);
-      if (sources.length > 0) {
+      setAvailableSources(latestSources);
+      if (latestSources.length > 0) {
         setHasUploadedDocuments(true);
       }
     } catch (error) {
@@ -264,10 +265,10 @@ const closeModal = () => {
 };
 
  return (
-  <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+  <div className="flex flex-col min-h-screen overflow-x-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50">
     {/* Header */}
-    <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 px-6 py-4 shadow-sm">
-      <div className="flex justify-between items-center">
+    <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 px-4 py-4 sm:px-6 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,11 +284,11 @@ const closeModal = () => {
             </p>
           </div>
         </div>
-        <div className="flex flex-col items-end space-y-2">
-          <div className="flex space-x-2">
+        <div className="flex w-full flex-col items-end space-y-2 sm:w-auto">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:space-x-2">
             <button
               onClick={() => openModal('upload')}
-              className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl sm:w-auto"
             >
                 <div className="flex items-center space-x-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,7 +299,7 @@ const closeModal = () => {
               </button>
               <button
                 onClick={() => openModal('url')}
-                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:from-purple-600 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl hover:from-purple-600 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl sm:w-auto"
               >
                 <div className="flex items-center space-x-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -309,7 +310,7 @@ const closeModal = () => {
               </button>
             </div>
             {selectedSource ? (
-              <div className="flex items-center space-x-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="text-sm text-indigo-600 font-medium">
                   Selected source: {selectedSource}
                 </div>
@@ -415,7 +416,7 @@ const closeModal = () => {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
                   />
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <div className="flex-1 relative">
                     <input
                       type="text"
@@ -462,7 +463,7 @@ const closeModal = () => {
     )}
 
     {/* Messages */}
-    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 space-y-6">
       {selectedSource && (
         <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
           Chatting using source: <span className="font-semibold">{selectedSource}</span>. You can still upload or ingest a new source from the header.
@@ -510,8 +511,8 @@ const closeModal = () => {
                     onClick={() => selectSource(source)}
                     className="rounded-2xl border border-gray-200 bg-white px-4 py-4 text-left shadow-sm hover:border-indigo-500 hover:bg-indigo-50 transition-all"
                   >
-                    <div className="text-sm font-semibold text-gray-900 truncate">{source}</div>
-                    <div className="mt-2 text-xs text-gray-500">Tap to start chatting with this source</div>
+                    <div className="text-sm font-semibold text-gray-900 break-words whitespace-normal">{source}</div>
+                    <div className="mt-2 text-xs text-gray-500 break-words whitespace-normal">Tap to start chatting with this source</div>
                   </button>
                 ))}
               </div>
@@ -523,7 +524,7 @@ const closeModal = () => {
       {messages.map((message) => (
         <div
           key={message.id}
-          className={`flex items-start space-x-3 ${
+          className={`flex min-w-0 items-start space-x-3 ${
             message.role === 'user' ? 'justify-end' : 'justify-start'
           }`}
         >
@@ -535,7 +536,7 @@ const closeModal = () => {
             </div>
           )}
           <div
-            className={`max-w-xs lg:max-w-2xl px-4 py-3 rounded-2xl shadow-lg ${
+            className={`max-w-full sm:max-w-2xl px-4 py-3 rounded-2xl shadow-lg ${
               message.role === 'user'
                 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md'
                 : 'bg-white border border-gray-200 text-gray-900 rounded-bl-md'
@@ -599,7 +600,7 @@ const closeModal = () => {
     {/* Input */}
     <div className="bg-white/80 backdrop-blur-sm border-t border-gray-200/50 px-6 py-4 shadow-lg">
       {selectedSource ? (
-        <form onSubmit={sendMessage} className="flex space-x-3">
+        <form onSubmit={sendMessage} className="flex flex-col gap-3 sm:flex-row sm:space-x-3 sm:gap-0">
           <div className="flex-1 relative">
             <input
               type="text"
@@ -630,6 +631,10 @@ const closeModal = () => {
         </div>
       )}
     </div>
+
+    <footer className="bg-white/80 backdrop-blur-sm border-t border-gray-200/50 px-4 py-3 sm:px-6 text-center text-xs text-gray-500">
+      Built by Naveesh Kumar V. Please do not upload any personal documents. AI-generated responses may be inaccurate or contain errors.
+    </footer>
   </div>
 );
 }
