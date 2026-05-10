@@ -8,16 +8,13 @@ interface EmbeddingItem {
   embedding: number[];
 }
 
-const {
-  OPEN_ROUTER_API_KEY,
-  OPEN_ROUTER_EMBED_MODEL,
-  OPEN_ROUTER_BASE_URL = 'https://openrouter.ai/api/v1',
-  ASTRA_DB_API_ENDPOINT: endpoint,
-  ASTRA_DB_COLLECTION_NAME,
-  ASTRA_DB_APPLICATION_TOKEN: token
-} = process.env;
-
 export async function getEmbeddings(texts: string[]) {
+  const {
+    OPEN_ROUTER_API_KEY,
+    OPEN_ROUTER_EMBED_MODEL,
+    OPEN_ROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+  } = process.env;
+
   const response = await fetch(OPEN_ROUTER_BASE_URL + '/embeddings', {
     method: 'POST',
     headers: {
@@ -106,6 +103,11 @@ export const ALLOWED_EXTENSIONS = ['.txt', '.md', '.pdf', '.doc', '.docx'];
  * `API_ENDPOINT` or `APPLICATION_TOKEN` are not defined.
  */
 export function connectToDatabase() {
+  const {
+    ASTRA_DB_API_ENDPOINT: endpoint,
+    ASTRA_DB_APPLICATION_TOKEN: token
+  } = process.env;
+
   if (!token || !endpoint) {
     throw new Error(
       'Environment variables ASTRA_DB_API_ENDPOINT and ASTRA_DB_APPLICATION_TOKEN must be defined.'
@@ -121,6 +123,7 @@ export function connectToDatabase() {
 }
 
 export async function createCollection() {
+  const { ASTRA_DB_COLLECTION_NAME } = process.env;
   const database = connectToDatabase();
   const collection_name = ASTRA_DB_COLLECTION_NAME || 'custom_gpt_collection';
   const dimension = 2048;
