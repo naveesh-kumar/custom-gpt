@@ -47,6 +47,7 @@ export async function getEmbeddings(text: string) {
 
 // Retrieve relevant documents from Astra DB using vector similarity search
 export async function retrieveRelevantDocuments(query: string, limit = 5, source?: string) {
+  const { ASTRA_DB_COLLECTION_NAME } = process.env;
   const db = await getDatabase();
   const collection = db.collection(ASTRA_DB_COLLECTION_NAME || 'custom_gpt_collection');
 
