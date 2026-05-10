@@ -1,12 +1,6 @@
 import { executeTool } from "./toolExecutors";
 import { tools } from "./tools";
 
-const {
-  OPEN_ROUTER_API_KEY,
-  OPEN_ROUTER_CHAT_MODEL,
-  OPEN_ROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
-} = process.env;
-
 type LLMMessage = {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content?: string;
@@ -19,6 +13,12 @@ type LLMMessage = {
 };
 
 export async function generateResponse(query: string, source?: string) {
+  const {
+    OPEN_ROUTER_API_KEY,
+    OPEN_ROUTER_CHAT_MODEL,
+    OPEN_ROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+  } = process.env;
+
   const MAX_TOOL_ROUNDS = 3;
 
   const SYSTEM_PROMPT = `You are a helpful RAG assistant that answers questions from uploaded documents and websites.

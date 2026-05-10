@@ -1,18 +1,14 @@
 import { DataAPIClient, Db } from '@datastax/astra-db-ts';
 
-const {
-  ASTRA_DB_API_ENDPOINT: endpoint,
-  ASTRA_DB_COLLECTION_NAME,
-  ASTRA_DB_APPLICATION_TOKEN: token,
-  OPEN_ROUTER_API_KEY,
-  OPEN_ROUTER_EMBED_MODEL,
-  OPEN_ROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
-} = process.env;
-
 let dbInstance: Db | null = null;
 
 export async function getDatabase(): Promise<Db> {
   if (!dbInstance) {
+    const {
+      ASTRA_DB_API_ENDPOINT: endpoint,
+      ASTRA_DB_APPLICATION_TOKEN: token
+    } = process.env;
+
     if (!token || !endpoint) {
       throw new Error('Database environment variables not configured');
     }
@@ -24,6 +20,12 @@ export async function getDatabase(): Promise<Db> {
 
 // Convert the question into vector embeddings using the same embedding model used for ingesting documents
 export async function getEmbeddings(text: string) {
+  const {
+    OPEN_ROUTER_API_KEY,
+    OPEN_ROUTER_EMBED_MODEL,
+    OPEN_ROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+  } = process.env;
+
   const response = await fetch(OPEN_ROUTER_BASE_URL + '/embeddings', {
     method: 'POST',
     headers: {
@@ -75,6 +77,7 @@ export async function retrieveRelevantDocuments(query: string, limit = 5, source
 }
 
 export async function getSources() {
+  const { ASTRA_DB_COLLECTION_NAME } = process.env;
   const db = await getDatabase();
   const collection = db.collection(ASTRA_DB_COLLECTION_NAME || 'custom_gpt_collection');
 
